@@ -68,7 +68,7 @@ def generate_ai_article(keyword, department):
     
     try:
         # ✅ 使用 gemini-1.5-flash (需搭配 requirements.txt >= 0.8.3)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-pro')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
