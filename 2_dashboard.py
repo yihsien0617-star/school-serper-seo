@@ -1,4 +1,4 @@
-# 檔案名稱：2_dashboard.py (最終修復版：強制使用 gemini-1.5-flash)
+# 檔案名稱：2_dashboard.py (保命版：Gemini Pro)
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -28,7 +28,7 @@ except FileNotFoundError:
 
 # --- 側邊欄 ---
 st.sidebar.title("🏫 招生策略控制台")
-st.sidebar.caption("核心：Gemini 1.5 Flash + Serper")
+st.sidebar.caption("系統核心：Gemini Pro (穩定版)")
 dept_list = ["全校總覽"] + list(df['Department'].unique())
 selected_dept = st.sidebar.selectbox("選擇分析視角", dept_list)
 
@@ -49,7 +49,7 @@ def get_google_results(keyword):
 
 # --- 函數 2: Gemini AI 寫文章 ---
 def generate_ai_article(keyword, department):
-    """呼叫 Gemini 1.5 Flash 撰寫招生文案"""
+    """呼叫 Gemini Pro 撰寫招生文案"""
     
     prompt = f"""
     你是一位資深的大學招生行銷專家。
@@ -67,7 +67,7 @@ def generate_ai_article(keyword, department):
     """
     
     try:
-        # ✅ 使用 gemini-1.5-flash (需搭配 requirements.txt >= 0.8.3)
+        # ⚠️ 使用最穩定的 Pro 模型，避免 404
         model = genai.GenerativeModel('gemini-pro')
         response = model.generate_content(prompt)
         return response.text
