@@ -1,4 +1,4 @@
-# 檔案名稱：2_dashboard.py (最終修復版：gemini-pro + 大按鈕)
+# 檔案名稱：2_dashboard.py (最終修復版：強制使用 gemini-1.5-flash)
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -9,11 +9,11 @@ import google.generativeai as genai
 # ==========================================
 # 🔑 設定區 (請在此填入您的 API Key)
 # ==========================================
-SERPER_API_KEY = "6dcb4225919e50e501bbddfab3411337b99c0547"       # 用來查 Google 真實排名
-GEMINI_API_KEY = "AIzaSyCU62-XBvqOsH3Dq3jvote9jd6jMew79Qk"       # 用來寫文章
+SERPER_API_KEY = "6dcb4225919e50e501bbddfab3411337b99c0547"
+GEMINI_API_KEY = "AIzaSyCU62-XBvqOsH3Dq3jvote9jd6jMew79Qk"
 # ==========================================
 
-# 設定 AI (如果有填 Key 才設定)
+# 設定 AI
 if "你的" not in GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
@@ -23,18 +23,17 @@ st.set_page_config(page_title="學校招生 SEO 戰情室", layout="wide")
 try:
     df = pd.read_csv('school_data.csv')
 except FileNotFoundError:
-    st.error("錯誤：找不到 school_data.csv，請確認 GitHub 檔案是否上傳成功。")
+    st.error("錯誤：找不到 school_data.csv。")
     st.stop()
 
 # --- 側邊欄 ---
 st.sidebar.title("🏫 招生策略控制台")
-st.sidebar.caption("系統狀態：Google 真實數據 + AI (Gemini Pro)")
+st.sidebar.caption("核心：Gemini 1.5 Flash + Serper")
 dept_list = ["全校總覽"] + list(df['Department'].unique())
 selected_dept = st.sidebar.selectbox("選擇分析視角", dept_list)
 
 # --- 函數 1: Serper 真實搜尋 ---
 def get_google_results(keyword):
-    """透過 Serper API 取得真實 Google 排名"""
     url = "https://google.serper.dev/search"
     payload = json.dumps({"q": keyword, "gl": "tw", "hl": "zh-tw", "num": 3})
     headers = {'X-API-KEY': SERPER_API_KEY, 'Content-Type': 'application/json'}
@@ -44,15 +43,14 @@ def get_google_results(keyword):
         if "organic" in data:
             return data["organic"], "🟢 Google 真實數據"
         else:
-            return [], "⚠️ 查無資料 (可能關鍵字太冷門)"
+            return [], "⚠️ 查無資料"
     except Exception as e:
         return [], f"連線錯誤: {str(e)}"
 
 # --- 函數 2: Gemini AI 寫文章 ---
 def generate_ai_article(keyword, department):
-    """呼叫 Gemini Pro 撰寫招生文案"""
+    """呼叫 Gemini 1.5 Flash 撰寫招生文案"""
     
-    # 提示詞工程 (Prompt Engineering)
     prompt = f"""
     你是一位資深的大學招生行銷專家。
     目標對象：台灣的高中生 (17-18歲) 及其家長。
@@ -69,8 +67,8 @@ def generate_ai_article(keyword, department):
     """
     
     try:
-        # ✅ 修正點：使用最穩定的 'gemini-pro' 模型，解決 404 錯誤
-        model = genai.GenerativeModel('gemini-pro')
+        # ✅ 使用 gemini-1.5-flash (需搭配 requirements.txt >= 0.8.3)
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -88,13 +86,12 @@ if selected_dept == "全校總覽":
     col2.metric("網路聲量冠軍", top)
     st.markdown("---")
     
-    # 簡單長條圖
     dept_traffic = df.groupby('Department')['Search_Volume'].sum().reset_index().sort_values('Search_Volume', ascending=False)
     fig_bar = px.bar(dept_traffic, x='Department', y='Search_Volume', color='Department')
     st.plotly_chart(fig_bar, width="stretch")
 
 else:
-    # === 單一科系視角 (AI 功能區) ===
+    # === 單一科系視角 ===
     st.title(f"🔍 {selected_dept}：招生關鍵字分析")
     dept_df = df[df['Department'] == selected_dept]
     
@@ -110,7 +107,7 @@ else:
     
     st.divider()
 
-    # --- 核心功能：搜尋 + AI ---
+    # --- 核心功能區 ---
     st.subheader("🕵️ 競爭對手偵查 & ✨ AI 文案生成")
     
     # 1. 選單
@@ -119,9 +116,9 @@ else:
         dept_df['Keyword'].unique()
     )
 
-    st.write("") # 留白
+    st.write("") 
 
-    # 2. 按鈕 (使用 use_container_width=True 確保按鈕超大、絕對看得到)
+    # 2. 按鈕 (最大化顯示)
     btn = st.button(
         "🚀 第二步：點我開始分析 + 生成文章", 
         type="primary", 
@@ -129,11 +126,10 @@ else:
     )
 
     if btn:
-        # 檢查 API Key
         if "你的" in GEMINI_API_KEY or "你的" in SERPER_API_KEY:
-             st.error("⚠️ 請先在程式碼中填入正確的 API Key (Serper 和 Gemini)！")
+             st.error("⚠️ 請先在程式碼中填入正確的 API Key！")
         else:
-            # A. 執行 Google 搜尋
+            # A. Google 搜尋
             with st.spinner(f"正在分析「{target_kw}」的 Google 排名..."):
                 results, status = get_google_results(target_kw)
                 
@@ -141,24 +137,20 @@ else:
                     st.error(status)
                 else:
                     st.success(f"✅ 搜尋完成！({status})")
-                    with st.expander("🔻 點擊查看目前的競爭對手 (前 3 名)", expanded=True):
+                    with st.expander("🔻 點擊查看目前的競爭對手", expanded=True):
                         if not results:
                             st.info("此關鍵字目前沒有顯著的競爭對手。")
                         for i, res in enumerate(results):
                             st.markdown(f"**{i+1}. [{res.get('title')}]({res.get('link')})**")
                             st.caption(res.get('snippet'))
 
-            # B. 執行 AI 寫作
+            # B. AI 寫作
             st.markdown("---")
             st.subheader(f"✨ AI 為您生成的「{target_kw}」文章草稿")
             
-            with st.spinner("🤖 AI 正在撰寫文章中，請稍候... (約需 5-10 秒)"):
+            with st.spinner("🤖 AI 正在撰寫文章中，請稍候..."):
                 ai_article = generate_ai_article(target_kw, selected_dept)
-                
-                # 顯示文章
                 st.markdown(ai_article)
-                
-                # 下載按鈕
                 st.download_button(
                     label="📥 下載這篇文章 (.txt)",
                     data=ai_article,
@@ -168,7 +160,7 @@ else:
 
     st.divider()
     
-    # 行動清單表格 (使用最安全的顯示方式，避免報錯)
+    # 行動清單表格
     st.subheader("📝 優先撰寫建議")
     clean_df = dept_df[['Keyword', 'Search_Volume', 'Competition_Level', 'Opportunity_Score']].sort_values('Opportunity_Score', ascending=False)
     st.dataframe(clean_df, use_container_width=True)
