@@ -95,9 +95,18 @@ if selected_dept == "全校總覽":
     fig_bar = px.bar(dept_traffic, x='Department', y='Search_Volume', color='Department')
     st.plotly_chart(fig_bar, width="stretch")
 
+# ... (上面是 if selected_dept == "全校總覽": 的程式碼，不用動)
+
 else:
+    # --- 單一科系視角 ---
     st.title(f"🔍 {selected_dept}：招生關鍵字分析")
     dept_df = df[df['Department'] == selected_dept]
+    
+    # 避免資料篩選後為空導致報錯
+    if dept_df.empty:
+        st.warning("⚠️ 這個科系目前沒有足夠的關鍵字數據。")
+        st.stop()
+
     best_keyword = dept_df.sort_values('Opportunity_Score', ascending=False).iloc[0]
     
     col1, col2 = st.columns(2)
@@ -106,54 +115,59 @@ else:
     
     st.divider()
 
-    # --- 核心功能區：搜尋 + AI ---
+    # --- 核心功能區：搜尋 + AI (修改版：拿掉左右欄位，改為垂直排列) ---
     st.subheader("🕵️ 競爭對手偵查 & ✨ AI 文案生成")
     
-    col_s1, col_s2 = st.columns([3, 1])
-    with col_s1:
-        target_kw = st.selectbox("選擇關鍵字：", dept_df['Keyword'].unique())
-    with col_s2:
-        st.write("") 
-        st.write("") 
-        btn = st.button("開始分析與生成", type="primary")
+    # 1. 關鍵字選單 (直接放，不包在 columns 裡)
+    target_kw = st.selectbox(
+        "👇 第一步：請選擇您想進攻的關鍵字", 
+        dept_df['Keyword'].unique()
+    )
+
+    st.write("") # 留一點空白
+    
+    # 2. 超大按鈕 (use_container_width=True 會讓按鈕填滿整行，絕對看得到)
+    btn = st.button(
+        "🚀 第二步：點我開始分析競爭對手 + 生成 AI 文章", 
+        type="primary", 
+        use_container_width=True
+    )
 
     if btn:
-        # 1. 執行搜尋分析
-        with st.spinner(f"正在分析「{target_kw}」的競爭對手..."):
-            results, status = get_google_results(target_kw)
-            
-            if "錯誤" in status:
-                st.error(status)
-            else:
-                st.success(f"✅ 分析完成！來源：{status}")
+        # 這裡的邏輯跟原本一樣
+        if "你的" in GEMINI_API_KEY or "你的" in SERPER_API_KEY:
+             st.error("⚠️ 請先在程式碼中填入正確的 API Key (Serper 和 Gemini)！")
+        else:
+            # 1. 執行搜尋分析
+            with st.spinner(f"正在分析「{target_kw}」的競爭對手..."):
+                results, status = get_google_results(target_kw)
                 
-                # 顯示競爭對手 (用折疊選單節省空間)
-                with st.expander("🔻 點擊查看目前的競爭對手排名 (Google 前 3 名)"):
-                    for i, res in enumerate(results):
-                        st.markdown(f"**{i+1}. [{res.get('title')}]({res.get('link')})**")
-                        st.caption(res.get('snippet'))
+                if "錯誤" in status:
+                    st.error(status)
+                else:
+                    st.success(f"✅ 分析完成！來源：{status}")
+                    with st.expander("🔻 點擊查看目前的競爭對手排名 (Google 前 3 名)", expanded=True):
+                        for i, res in enumerate(results):
+                            st.markdown(f"**{i+1}. [{res.get('title')}]({res.get('link')})**")
+                            st.caption(res.get('snippet'))
 
-        # 2. 執行 AI 寫作
-        st.markdown("---")
-        st.subheader(f"✨ AI 為您生成的「{target_kw}」招生草稿")
-        
-        with st.spinner("🤖 AI 正在撰寫文章中，請稍候... (約需 5-10 秒)"):
-            ai_article = generate_ai_article(target_kw, selected_dept)
+            # 2. 執行 AI 寫作
+            st.markdown("---")
+            st.subheader(f"✨ AI 為您生成的「{target_kw}」招生草稿")
             
-            # 顯示文章
-            st.markdown(ai_article)
-            
-            # 提供下載按鈕
-            st.download_button(
-                label="📥 下載這篇文章 (.txt)",
-                data=ai_article,
-                file_name=f"{selected_dept}_{target_kw}_文章草稿.txt",
-                mime="text/plain"
-            )
+            with st.spinner("🤖 AI 正在撰寫文章中，請稍候... (約需 5-10 秒)"):
+                ai_article = generate_ai_article(target_kw, selected_dept)
+                st.markdown(ai_article)
+                st.download_button(
+                    label="📥 下載這篇文章 (.txt)",
+                    data=ai_article,
+                    file_name=f"{selected_dept}_{target_kw}_文章草稿.txt",
+                    mime="text/plain"
+                )
 
     st.divider()
     
-    # 行動清單 (確保不報錯的安全版)
+    # 行動清單
     st.subheader("📝 優先撰寫建議")
     clean_df = dept_df[['Keyword', 'Search_Volume', 'Competition_Level', 'Opportunity_Score']].sort_values('Opportunity_Score', ascending=False)
-    st.dataframe(clean_df, width=1000)
+    st.dataframe(clean_df, use_container_width=True)
