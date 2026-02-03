@@ -73,7 +73,7 @@ def generate_ai_article(keyword, department):
     
     try:
         # 使用最新的 Gemini 1.5 Flash 模型 (速度快、免費額度高)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-pro')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
