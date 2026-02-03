@@ -1,10 +1,11 @@
-# 檔案名稱：2_dashboard.py (Gemini 2.0 Flash 版)
+# 檔案名稱：2_dashboard.py (省油防爆版：Gemini 2.0 Flash + 快取機制)
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
 import json
 import google.generativeai as genai
+import time
 
 # ==========================================
 # 🔑 設定區 (請在此填入您的 API Key)
@@ -26,13 +27,14 @@ except FileNotFoundError:
     st.error("錯誤：找不到 school_data.csv。")
     st.stop()
 
-# --- 側邊欄 ---
 st.sidebar.title("🏫 招生策略控制台")
-st.sidebar.caption("核心：Gemini 2.0 Flash (最新版)")
+st.sidebar.caption("核心：Gemini 2.0 Flash (已啟用快取)")
 dept_list = ["全校總覽"] + list(df['Department'].unique())
 selected_dept = st.sidebar.selectbox("選擇分析視角", dept_list)
 
 # --- 函數 1: Serper 真實搜尋 ---
+# 加入 ttl=3600 代表這個搜尋結果會記住 1 小時，不會一直浪費錢重查
+@st.cache_data(ttl=3600)
 def get_google_results(keyword):
     url = "https://google.serper.dev/search"
     payload = json.dumps({"q": keyword, "gl": "tw", "hl": "zh-tw", "num": 3})
@@ -48,6 +50,8 @@ def get_google_results(keyword):
         return [], f"連線錯誤: {str(e)}"
 
 # --- 函數 2: Gemini AI 寫文章 ---
+# 加入 show_spinner=False 避免快取時重複轉圈圈
+@st.cache_data(show_spinner=False) 
 def generate_ai_article(keyword, department):
     """呼叫 Gemini 2.0 Flash 撰寫招生文案"""
     
@@ -67,11 +71,14 @@ def generate_ai_article(keyword, department):
     """
     
     try:
-        # ✅ 指定你帳號擁有的 Gemini 2.0 模型
+        # ✅ 使用已確認可用的 2.0 Flash
         model = genai.GenerativeModel('gemini-2.0-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
+        # 如果遇到 429 錯誤，回傳友善提示
+        if "429" in str(e):
+            return "⏳ 系統忙碌中 (429 Error)。Google 免費版 API 每分鐘有限制次數，請稍等 1 分鐘後再試，或不要連續頻繁點擊。"
         return f"❌ AI 生成失敗: {str(e)}"
 
 # --- 主畫面邏輯 ---
@@ -118,7 +125,7 @@ else:
 
     st.write("") 
 
-    # 2. 按鈕 (最大化顯示)
+    # 2. 按鈕
     btn = st.button(
         "🚀 第二步：點我開始分析 + 生成文章", 
         type="primary", 
@@ -148,15 +155,20 @@ else:
             st.markdown("---")
             st.subheader(f"✨ AI 為您生成的「{target_kw}」文章草稿")
             
-            with st.spinner("🤖 AI (Gemini 2.0) 正在撰寫文章中，請稍候..."):
+            with st.spinner("🤖 AI 正在撰寫文章中..."):
                 ai_article = generate_ai_article(target_kw, selected_dept)
-                st.markdown(ai_article)
-                st.download_button(
-                    label="📥 下載這篇文章 (.txt)",
-                    data=ai_article,
-                    file_name=f"{selected_dept}_{target_kw}_文章草稿.txt",
-                    mime="text/plain"
-                )
+                
+                # 如果是 429 忙碌訊息，顯示黃色警告
+                if "⏳" in ai_article:
+                    st.warning(ai_article)
+                else:
+                    st.markdown(ai_article)
+                    st.download_button(
+                        label="📥 下載這篇文章 (.txt)",
+                        data=ai_article,
+                        file_name=f"{selected_dept}_{target_kw}_文章草稿.txt",
+                        mime="text/plain"
+                    )
 
     st.divider()
     
