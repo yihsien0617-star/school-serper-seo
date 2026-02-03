@@ -11,7 +11,7 @@ import time
 # 🔑 設定區 (請在此填入您的 API Key)
 # ==========================================
 SERPER_API_KEY = "6dcb4225919e50e501bbddfab3411337b99c0547"
-GEMINI_API_KEY = "AIzaSyCU62-XBvqOsH3Dq3jvote9jd6jMew79Qk"
+GEMINI_API_KEY = "AIzaSyBw3XcuicFgLHVsvG0LTl41CackAn6JUFA"
 # ==========================================
 
 # 設定 AI
