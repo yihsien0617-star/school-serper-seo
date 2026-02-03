@@ -7,7 +7,7 @@ import json
 
 # ==========================================
 # 🔑 請將你在 serper.dev 申請的 API Key 貼在下方
-SERPER_API_KEY = "這裡貼上你的API_KEY" 
+SERPER_API_KEY = "6dcb4225919e50e501bbddfab3411337b99c0547" 
 # ==========================================
 
 st.set_page_config(page_title="學校招生 SEO 戰情室 (真實數據版)", layout="wide")
