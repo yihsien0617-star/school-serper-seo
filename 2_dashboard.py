@@ -48,6 +48,8 @@ def get_google_results(keyword):
 
 # --- 函數 2: Gemini AI 寫文章 ---
 def generate_ai_article(keyword, department):
+# --- 函數 2: Gemini AI 寫文章 (修正版：使用 gemini-pro) ---
+def generate_ai_article(keyword, department):
     """
     呼叫 Gemini 為特定關鍵字撰寫招生文案
     """
@@ -72,7 +74,7 @@ def generate_ai_article(keyword, department):
     """
     
     try:
-        # 使用最新的 Gemini 1.5 Flash 模型 (速度快、免費額度高)
+        # 改用最穩定的 gemini-pro 模型，保證不報錯
         model = genai.GenerativeModel('gemini-pro')
         response = model.generate_content(prompt)
         return response.text
