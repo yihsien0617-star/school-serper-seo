@@ -161,3 +161,20 @@ else:
         .style.background_gradient(subset=['Opportunity_Score'], cmap="Greens"),
         width="stretch"
     )
+# 這只是一個概念範例
+import google.generativeai as genai
+
+def generate_article(keyword):
+    prompt = f"""
+    你是一位資深的大學招生行銷專家。
+    請針對關鍵字「{keyword}」，為中華醫事科技大學醫學檢驗生物技術系，
+    撰寫一篇 500 字的部落格文章。
+    
+    文章要求：
+    1. 語氣親切，針對高中生與家長。
+    2. 必須提到本系的優勢（如：國考通過率高、設備新）。
+    3. 包含 3 個常見問答 (FAQ)。
+    """
+    model = genai.GenerativeModel('gemini-pro')
+    response = model.generate_content(prompt)
+    return response.text
