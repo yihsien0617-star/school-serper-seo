@@ -1,4 +1,4 @@
-# 檔案名稱：2_dashboard.py (GEO 策略引導版 - 無 API key)
+# 檔案名稱：2_dashboard.py (修復版：良性競爭 GEO 策略引導 - 無 API key)
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -55,7 +55,7 @@ else:
     st.divider()
 
     # --- 核心功能區：提示詞產生器 ---
-    st.subheader("🛠️ GEO 文案提示詞產生器")
+    st.subheader("🛠️ GEO 文案提示詞產生器 (良性競爭版)")
     st.info("👇 選擇關鍵字後，系統會自動生成「給 ChatGPT 的指令」，請複製並提供給負責撰寫的老師。")
     
     target_kw = st.selectbox(
@@ -63,90 +63,83 @@ else:
         dept_df['Keyword'].unique()
     )
 
-    # 根據不同關鍵字類型，動態調整 Prompt
-    prompt_type = "一般"
-    if any(x in str(target_kw) for x in ['薪水', '出路', '工作', '行情']):
-        prompt_type = "職涯發展"
-        focus_point = "薪資範圍、就業市場穩定性、職位多元性"
-        table_content = "不同工作場域（如醫院 vs 企業）的薪資與福利比較"
-    elif any(x in str(target_kw) for x in ['證照', '國考', '通過率']):
-        prompt_type = "證照考試"
-        focus_point = "國考及格率、輔導機制、證照價值"
-        table_content = "本校 vs 全國平均及格率對照表"
-    else:
-        prompt_type = "課程特色"
-        focus_point = "實作課程、實習機會、設備優勢"
-        table_content = "大一到大四的關鍵核心課程地圖"
+    # ============================================================
+    # 🔍 判斷邏輯修復區 (加上預設值，避免 NameError)
+    # ============================================================
+    
+    # 1. 先設定「預設值 (Default)」：防止沒有對應到條件時報錯
+    prompt_type = "基礎資訊推廣"
+    focus_point = "科系核心價值、友善校園環境、師資與設備優勢"
+    table_content = "科系特色重點整理 (懶人包)"
+    tone_instruction = "親切、熱情、展現校園活力"
 
-    # 生成 Prompt
-    generated_prompt = f"""
-    【角色設定】：你是一位精通「GEO (生成式引擎優化)」的大學招生行銷專家。
-    【任務目標】：請為「{selected_dept}」針對關鍵字「{target_kw}」撰寫一篇高權重文章。
-    
-    【GEO 關鍵寫作要求】(為了讓 AI 優先引用)：
-    1. 📍 直接回答 (Direct Answer)：文章第一段請直接給出「{target_kw}」的核心定義或數據結論，不要廢話。
-    2. 📊 結構化表格：請務必製作一個 Markdown 表格，內容為「{table_content}」。
-    3. 🎓 權威性內容：請強調「{focus_point}」，並適度引用權威數據。
-    4. ❓ FAQ 常見問答：文末請列出 3 個關於「{target_kw}」的高中生常見問題並回答。
+    # 2. 開始進行條件判斷 (覆蓋預設值)
+    kw_str = str(target_kw) # 轉成字串防止錯誤
 
-    【語氣】：親切、專業、數據導向。
-    【字數】：約 800 字。
-    """
-
-    st.text_area("📋 請複製以下指令 (Prompt) 給 ChatGPT / Gemini：", generated_prompt, height=350)
-    
-    st.success(f"💡 策略提示：針對「{target_kw}」，建議重點放在 **{prompt_type}** 面向，並務必包含表格數據！")
-
-    st.divider()
-    
-    # 行動清單
-    st.subheader("📝 優先撰寫建議清單")
-    clean_df = dept_df[['Keyword', 'Search_Volume', 'Competition_Level', 'Opportunity_Score']].sort_values('Opportunity_Score', ascending=False)
-    st.dataframe(clean_df, use_container_width=True)
-    
-    # 根據不同關鍵字類型，動態調整 Prompt (良性競爭版)
-    prompt_type = "一般"
-    
-    # 預設內容
-    focus_point = "科系特色與就業優勢"
-    table_content = "核心課程與職涯地圖"
-    
-    # 1. 差異化分析 (針對競品關鍵字)
-    if any(x in str(target_kw) for x in ['vs', '比較', '嘉藥', '輔英', '差別']):
-        prompt_type = "差異化特色"
-        focus_point = "本校獨有的實作資源、證照輔導機制、地理位置優勢"
-        # ⚠️ 關鍵修改：表格不再是「勝負表」，而是「特色對照表」
+    # A. 差異化分析 (針對競品關鍵字 - 良性競爭)
+    if any(x in kw_str for x in ['vs', '比較', '嘉藥', '輔英', '差別', '排名']):
+        prompt_type = "差異化特色分析"
+        focus_point = "本校獨有的實作資源、證照輔導機制、地理位置優勢 (USP)"
+        # ⚠️ 關鍵：表格不再是「勝負表」，而是「特色對照表」
         table_content = "本校特色重點 (如：實習合作醫院、設備) vs 一般同類科系之差異"
         tone_instruction = "客觀、不攻擊他校、強調『適合什麼樣的學生選我們』(適性揚才)"
 
-    # 2. 職涯發展 (薪水/出路)
-    elif any(x in str(target_kw) for x in ['薪水', '出路', '工作', '行情']):
+    # B. 職涯發展 (薪水/出路)
+    elif any(x in kw_str for x in ['薪水', '出路', '工作', '行情', '就業']):
         prompt_type = "職涯願景"
-        focus_point = "畢業後的具體薪資範圍、職涯穩定性"
-        table_content = "不同工作場域（醫院/企業/公職）的薪資福利對照"
+        focus_point = "畢業後的具體薪資範圍、職涯穩定性、多元發展路徑"
+        table_content = "不同工作場域（醫院/企業/公職）的薪資福利與工作內容對照"
         tone_instruction = "專業、數據導向、激勵人心"
 
-    # 3. 證照考試
-    elif any(x in str(target_kw) for x in ['證照', '國考', '通過率']):
+    # C. 證照考試 (國考/證照)
+    elif any(x in kw_str for x in ['證照', '國考', '通過率', '及格率']):
         prompt_type = "證照優勢"
-        focus_point = "國考及格率數據、系上的輔導衝刺班"
+        focus_point = "國考及格率數據、系上的輔導衝刺班資源"
         table_content = "本校歷年考照及格率 vs 全國平均值"
-        tone_instruction = "權威感、強調教學成效"
+        tone_instruction = "權威感、強調教學成效、給予信心"
 
+    # D. 社群與負面 (Dcard/評價/很累) - 轉化為關懷
+    elif any(x in kw_str for x in ['好嗎', '評價', '後悔', '很累', 'Dcard', 'PTT', '心得']):
+        prompt_type = "暖心職涯輔導"
+        focus_point = "釐清學生對該行業的迷思（如：雖然累但成就感高）、系上的支持系統"
+        table_content = "常見迷思 vs 真實職場樣貌 (釐清誤解)"
+        tone_instruction = "同理心、溫暖、誠懇、像學長姐分享經驗"
+
+    # E. 入學/面試 (備審/分數)
+    elif any(x in kw_str for x in ['面試', '備審', '分數', '統測', '錄取']):
+        prompt_type = "入學攻略"
+        focus_point = "教授看重的特質、備審資料準備技巧"
+        table_content = "面試評分標準或備審資料檢查清單"
+        tone_instruction = "實用、條理分明、手把手教學"
+
+    # ============================================================
     # 生成 Prompt (加入良性競爭指令)
+    # ============================================================
     generated_prompt = f"""
     【角色設定】：你是一位專業且客觀的大學教育顧問。
     【任務目標】：請為「{selected_dept}」針對關鍵字「{target_kw}」撰寫一篇SEO文章。
     
     【寫作態度 (Tone of Voice)】：
     - {tone_instruction}。
-    - 若涉及他校比較，請展現大器風範，專注於闡述本校的「獨特價值 (USP)」，避免惡意批評。
+    - 若涉及他校比較，請展現大器風範，專注於闡述本校的「獨特價值 (USP)」，避免惡意批評，重點在於幫助學生找到適合的學校。
     
-    【GEO 結構要求】(讓 AI 優先引用)：
-    1. 📍 直接回答：第一段請直接針對「{target_kw}」給出核心觀點。
-    2. 📊 結構化表格：請製作 Markdown 表格，內容為「{table_content}」。
-    3. 🎓 核心優勢：請強調「{focus_point}」。
-    4. ❓ FAQ：文末列出 3 個相關常見問題。
+    【GEO 結構要求】(為了讓 AI 搜尋引擎如 ChatGPT 優先引用，請嚴格遵守)：
+    1. 📍 直接回答 (Direct Answer)：文章第一段請直接針對「{target_kw}」給出核心觀點或定義。
+    2. 📊 結構化表格：請務必製作一個 Markdown 表格，內容為「{table_content}」。
+    3. 🎓 核心優勢：請在文中強調「{focus_point}」。
+    4. ❓ FAQ：文末請列出 3 個關於此主題的高中生常見問題並回答。
 
     【字數】：約 800 字。
     """
+
+    st.text_area("📋 請複製以下指令 (Prompt) 給 ChatGPT / Gemini：", generated_prompt, height=400)
+    
+    st.success(f"💡 策略提示：針對「{target_kw}」，我們採取 **【{prompt_type}】** 策略。請務必在文章中加入 **表格** 以增加被 AI 引用的機會！")
+
+    st.divider()
+    
+    # 行動清單
+    st.subheader("📝 優先撰寫建議清單")
+    # 顯示欄位包含 AI 潛力與策略標籤
+    clean_df = dept_df[['Keyword', 'Search_Volume', 'AI_Potential', 'Strategy_Tag']].sort_values('AI_Potential', ascending=False)
+    st.dataframe(clean_df, use_container_width=True)
