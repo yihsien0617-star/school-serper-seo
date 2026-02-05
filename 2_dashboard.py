@@ -103,3 +103,50 @@ else:
     st.subheader("📝 優先撰寫建議清單")
     clean_df = dept_df[['Keyword', 'Search_Volume', 'Competition_Level', 'Opportunity_Score']].sort_values('Opportunity_Score', ascending=False)
     st.dataframe(clean_df, use_container_width=True)
+    
+    # 根據不同關鍵字類型，動態調整 Prompt (良性競爭版)
+    prompt_type = "一般"
+    
+    # 預設內容
+    focus_point = "科系特色與就業優勢"
+    table_content = "核心課程與職涯地圖"
+    
+    # 1. 差異化分析 (針對競品關鍵字)
+    if any(x in str(target_kw) for x in ['vs', '比較', '嘉藥', '輔英', '差別']):
+        prompt_type = "差異化特色"
+        focus_point = "本校獨有的實作資源、證照輔導機制、地理位置優勢"
+        # ⚠️ 關鍵修改：表格不再是「勝負表」，而是「特色對照表」
+        table_content = "本校特色重點 (如：實習合作醫院、設備) vs 一般同類科系之差異"
+        tone_instruction = "客觀、不攻擊他校、強調『適合什麼樣的學生選我們』(適性揚才)"
+
+    # 2. 職涯發展 (薪水/出路)
+    elif any(x in str(target_kw) for x in ['薪水', '出路', '工作', '行情']):
+        prompt_type = "職涯願景"
+        focus_point = "畢業後的具體薪資範圍、職涯穩定性"
+        table_content = "不同工作場域（醫院/企業/公職）的薪資福利對照"
+        tone_instruction = "專業、數據導向、激勵人心"
+
+    # 3. 證照考試
+    elif any(x in str(target_kw) for x in ['證照', '國考', '通過率']):
+        prompt_type = "證照優勢"
+        focus_point = "國考及格率數據、系上的輔導衝刺班"
+        table_content = "本校歷年考照及格率 vs 全國平均值"
+        tone_instruction = "權威感、強調教學成效"
+
+    # 生成 Prompt (加入良性競爭指令)
+    generated_prompt = f"""
+    【角色設定】：你是一位專業且客觀的大學教育顧問。
+    【任務目標】：請為「{selected_dept}」針對關鍵字「{target_kw}」撰寫一篇SEO文章。
+    
+    【寫作態度 (Tone of Voice)】：
+    - {tone_instruction}。
+    - 若涉及他校比較，請展現大器風範，專注於闡述本校的「獨特價值 (USP)」，避免惡意批評。
+    
+    【GEO 結構要求】(讓 AI 優先引用)：
+    1. 📍 直接回答：第一段請直接針對「{target_kw}」給出核心觀點。
+    2. 📊 結構化表格：請製作 Markdown 表格，內容為「{table_content}」。
+    3. 🎓 核心優勢：請強調「{focus_point}」。
+    4. ❓ FAQ：文末列出 3 個相關常見問題。
+
+    【字數】：約 800 字。
+    """
